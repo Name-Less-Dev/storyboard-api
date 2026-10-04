@@ -1,0 +1,38 @@
+# Local development stack: API + PostgreSQL.
+# The POSTGRES_* credentials below are for LOCAL DEVELOPMENT ONLY. They are not
+# secrets and must never be reused in any shared or production environment.
+
+services:
+  db:
+    image: postgres:18.6
+    environment:
+      POSTGRES_USER: storyboard
+      POSTGRES_PASSWORD: storyboard-dev-only
+      POSTGRES_DB: storyboard
+    volumes:
+      # Postgres 18+ images keep data under /var/lib/postgresql/<major>/docker,
+      # so the volume is mounted at /var/lib/postgresql (not .../data).
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    # Optional: GENERATOR and GEMINI_* come from .env when it exists.
+    env_file:
+      - path: .env
+        required: false
+    # `environment` wins over env_file, so the API always uses the compose database.
+    environment:
+      DATABASE_URL: postgresql+psycopg://storyboard:storyboard-dev-only@db:5432/storyboard
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:
