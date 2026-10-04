@@ -69,7 +69,7 @@ storyboard-api/
 │       ├── storyboard.py    # FakeGenerator (deterministic)
 │       └── gemini.py        # GeminiGenerator (google-genai SDK)
 ├── tests/                   # pytest suite (in-memory SQLite, no network)
-├── docs/                    # screenshots (TODO: added manually)
+├── docs/                    # Swagger UI screenshot
 ├── .github/workflows/ci.yml
 ├── Dockerfile
 ├── docker-compose.yml
@@ -90,9 +90,7 @@ storyboard-api/
 
 Interactive docs: http://localhost:8000/docs
 
-![Swagger UI](docs/screenshot-docs.png)
-
-> **TODO:** `docs/screenshot-docs.png` will be added manually (screenshot of `/docs`).
+![Swagger UI listing the four routes (GET /health, GET /briefs, POST /briefs, GET /briefs/{brief_id}) and the data schemas](docs/screenshot-docs.png)
 
 Example (fake generator):
 
