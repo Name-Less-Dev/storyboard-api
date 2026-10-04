@@ -1,7 +1,9 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, status
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app import models  # noqa: F401  (registers ORM tables on Base.metadata)
@@ -10,6 +12,8 @@ from app.db import Base, engine, get_db
 from app.mappers import to_record, to_summary
 from app.schemas import BriefCreate, BriefRecord, BriefResult, BriefSummary
 from app.services.storyboard import generate_storyboard
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -30,7 +34,15 @@ def health() -> dict[str, str]:
 @app.post("/briefs", response_model=BriefRecord, status_code=status.HTTP_201_CREATED)
 def create_brief(brief: BriefCreate, db: Session = Depends(get_db)) -> BriefRecord:
     # Building BriefResult runs the duration-sum validator before anything is saved.
-    result = BriefResult(brief=brief, storyboard=generate_storyboard(brief))
+    try:
+        result = BriefResult(brief=brief, storyboard=generate_storyboard(brief))
+    except ValidationError as exc:
+        # The generator is an upstream service: invalid output is a 502, not a 4xx/500.
+        logger.error("Generated storyboard failed validation: %s", exc.errors())
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Generated storyboard failed validation",
+        ) from exc
     row = repository.create_brief(db, result)
     return to_record(row)
 
