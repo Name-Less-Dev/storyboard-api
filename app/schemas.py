@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -45,3 +46,18 @@ class BriefResult(BaseModel):
                 f"scene durations sum to {total}s, expected {self.brief.duration_seconds}s"
             )
         return self
+
+
+class BriefSummary(BaseModel):
+    id: int
+    product_name: str
+    tone: Tone
+    duration_seconds: int
+    created_at: datetime
+
+
+class BriefRecord(BaseModel):
+    id: int
+    created_at: datetime
+    brief: BriefCreate
+    storyboard: Storyboard
