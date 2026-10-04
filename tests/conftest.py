@@ -1,9 +1,10 @@
 import os
 from collections.abc import Iterator
 
-# Force the fake generator before the app is imported: no test may need an API key
-# or the network, whatever the local .env says (env vars take precedence over .env).
+# Set before the app is imported (env vars take precedence over .env): no test may
+# need an API key or the network, and the app engine never points at a real database.
 os.environ["GENERATOR"] = "fake"
+os.environ["DATABASE_URL"] = "sqlite://"
 
 import pytest
 from fastapi.testclient import TestClient

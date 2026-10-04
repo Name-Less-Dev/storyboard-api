@@ -12,13 +12,17 @@ class Settings(BaseSettings):
     """App settings, read from environment variables and the optional .env file.
 
     Environment variables take precedence over .env; names are case-insensitive
-    (GENERATOR, GEMINI_API_KEY, GEMINI_MODEL, LLM_TIMEOUT_SECONDS).
+    (DATABASE_URL, GENERATOR, GEMINI_API_KEY, GEMINI_MODEL, LLM_TIMEOUT_SECONDS).
     """
 
     # hide_input_in_errors: validation errors must never echo the raw API key.
     model_config = SettingsConfigDict(
         env_file=ENV_FILE, extra="ignore", hide_input_in_errors=True
     )
+
+    # Relative SQLite paths resolve against the working directory (the project root
+    # when started with `uvicorn app.main:app`). Docker compose sets a Postgres URL.
+    database_url: str = "sqlite:///./storyboard.db"
 
     generator: Literal["fake", "llm"] = "fake"
     # SecretStr keeps the key out of reprs, logs and tracebacks.
