@@ -10,3 +10,12 @@ uvicorn app.main:app --reload
 ```
 
 Then open http://127.0.0.1:8000/docs.
+
+## Running tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest -v
+```
+
+Tests use an in-memory SQLite database and never touch `storyboard.db`.
