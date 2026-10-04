@@ -1,4 +1,9 @@
+import os
 from collections.abc import Iterator
+
+# Force the fake generator before the app is imported: no test may need an API key
+# or the network, whatever the local .env says (env vars take precedence over .env).
+os.environ["GENERATOR"] = "fake"
 
 import pytest
 from fastapi.testclient import TestClient
@@ -7,9 +12,10 @@ from sqlalchemy.pool import StaticPool
 
 from app import models  # noqa: F401  (registers ORM tables on Base.metadata)
 from app.db import Base, get_db, make_engine, make_session_factory
+from app.dependencies import get_generator
 from app.main import app
 from app.schemas import BriefCreate, BriefResult
-from app.services.storyboard import generate_storyboard
+from app.services.storyboard import FakeGenerator
 
 
 @pytest.fixture
@@ -33,6 +39,7 @@ def client(db_session: Session) -> Iterator[TestClient]:
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_generator] = FakeGenerator
     # Not used as a context manager on purpose: that would run the app lifespan,
     # which creates tables on the real storyboard.db engine.
     try:
@@ -53,4 +60,4 @@ def make_brief(**overrides) -> BriefCreate:
 
 def make_result(**overrides) -> BriefResult:
     brief = make_brief(**overrides)
-    return BriefResult(brief=brief, storyboard=generate_storyboard(brief))
+    return BriefResult(brief=brief, storyboard=FakeGenerator().generate(brief))

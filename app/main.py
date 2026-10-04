@@ -8,16 +8,21 @@ from sqlalchemy.orm import Session
 
 from app import models  # noqa: F401  (registers ORM tables on Base.metadata)
 from app import repository
+from app.config import get_settings
 from app.db import Base, engine, get_db
+from app.dependencies import get_generator
 from app.mappers import to_record, to_summary
 from app.schemas import BriefCreate, BriefRecord, BriefResult, BriefSummary
-from app.services.storyboard import generate_storyboard
+from app.services.base import StoryboardGenerator
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    # Fail fast on invalid settings (e.g. GENERATOR=llm without GEMINI_API_KEY).
+    get_settings()
+    get_generator()
     # Schema migrations (Alembic) will replace this later.
     Base.metadata.create_all(engine)
     yield
@@ -32,10 +37,14 @@ def health() -> dict[str, str]:
 
 
 @app.post("/briefs", response_model=BriefRecord, status_code=status.HTTP_201_CREATED)
-def create_brief(brief: BriefCreate, db: Session = Depends(get_db)) -> BriefRecord:
+def create_brief(
+    brief: BriefCreate,
+    db: Session = Depends(get_db),
+    generator: StoryboardGenerator = Depends(get_generator),
+) -> BriefRecord:
     # Building BriefResult runs the duration-sum validator before anything is saved.
     try:
-        result = BriefResult(brief=brief, storyboard=generate_storyboard(brief))
+        result = BriefResult(brief=brief, storyboard=generator.generate(brief))
     except ValidationError as exc:
         # The generator is an upstream service: invalid output is a 502, not a 4xx/500.
         logger.error("Generated storyboard failed validation: %s", exc.errors())

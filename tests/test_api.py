@@ -1,5 +1,7 @@
 import logging
 
+from app.dependencies import get_generator
+from app.main import app
 from app.schemas import BriefCreate, Scene, Storyboard
 
 VALID_BRIEF = {
@@ -68,18 +70,18 @@ def test_get_unknown_brief_returns_404(client):
     assert response.json() == {"detail": "Brief not found"}
 
 
-def test_invalid_generator_output_returns_502_and_saves_nothing(client, monkeypatch, caplog):
-    def broken_generator(brief: BriefCreate) -> Storyboard:
-        return Storyboard(
-            scenes=[
-                Scene(order=1, duration_seconds=6, visual="v", narration="n"),
-                Scene(order=2, duration_seconds=6, visual="v", narration="n"),
-                Scene(order=3, duration_seconds=7, visual="v", narration="n"),
-            ]
-        )  # 19s
+def test_invalid_generator_output_returns_502_and_saves_nothing(client, caplog):
+    class BrokenGenerator:
+        def generate(self, brief: BriefCreate) -> Storyboard:
+            return Storyboard(
+                scenes=[
+                    Scene(order=1, duration_seconds=6, visual="v", narration="n"),
+                    Scene(order=2, duration_seconds=6, visual="v", narration="n"),
+                    Scene(order=3, duration_seconds=7, visual="v", narration="n"),
+                ]
+            )  # 19s
 
-    # Patch where the route looks the name up, not where it is defined.
-    monkeypatch.setattr("app.main.generate_storyboard", broken_generator)
+    app.dependency_overrides[get_generator] = BrokenGenerator
 
     with caplog.at_level(logging.ERROR, logger="app.main"):
         response = post_brief(client, duration_seconds=20)
