@@ -11,4 +11,12 @@ def get_generator() -> StoryboardGenerator:
     settings = get_settings()
     if settings.generator == "fake":
         return FakeGenerator()
-    raise NotImplementedError("LLM generator is not implemented yet")
+
+    # Imported lazily so the fake path never needs the Gemini SDK.
+    from app.services.gemini import GeminiGenerator
+
+    return GeminiGenerator(
+        api_key=settings.gemini_api_key.get_secret_value(),
+        model=settings.gemini_model,
+        timeout_seconds=settings.llm_timeout_seconds,
+    )

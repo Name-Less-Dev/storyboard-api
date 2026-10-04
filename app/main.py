@@ -13,9 +13,12 @@ from app.db import Base, engine, get_db
 from app.dependencies import get_generator
 from app.mappers import to_record, to_summary
 from app.schemas import BriefCreate, BriefRecord, BriefResult, BriefSummary
-from app.services.base import StoryboardGenerator
+from app.services.base import GeneratorError, StoryboardGenerator
 
 logger = logging.getLogger(__name__)
+
+INVALID_OUTPUT_DETAIL = "Generated storyboard failed validation"
+UNAVAILABLE_DETAIL = "Storyboard generator temporarily unavailable"
 
 
 @asynccontextmanager
@@ -49,8 +52,16 @@ def create_brief(
         # The generator is an upstream service: invalid output is a 502, not a 4xx/500.
         logger.error("Generated storyboard failed validation: %s", exc.errors())
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Generated storyboard failed validation",
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=INVALID_OUTPUT_DETAIL
+        ) from exc
+    except GeneratorError as exc:
+        logger.error("Storyboard generator failed (kind=%s): %s", exc.kind, exc)
+        if exc.kind == "unavailable":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=UNAVAILABLE_DETAIL
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=INVALID_OUTPUT_DETAIL
         ) from exc
     row = repository.create_brief(db, result)
     return to_record(row)

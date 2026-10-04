@@ -15,7 +15,10 @@ class Settings(BaseSettings):
     (GENERATOR, GEMINI_API_KEY, GEMINI_MODEL, LLM_TIMEOUT_SECONDS).
     """
 
-    model_config = SettingsConfigDict(env_file=ENV_FILE, extra="ignore")
+    # hide_input_in_errors: validation errors must never echo the raw API key.
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE, extra="ignore", hide_input_in_errors=True
+    )
 
     generator: Literal["fake", "llm"] = "fake"
     # SecretStr keeps the key out of reprs, logs and tracebacks.
