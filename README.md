@@ -1,7 +1,6 @@
 # storyboard-api
 
-> **TODO (CI badge):** this repository has no Git remote yet. After pushing to GitHub, add:
-> `![CI](https://github.com/<owner>/storyboard-api/actions/workflows/ci.yml/badge.svg)`
+![CI](https://github.com/Name-Less-Dev/storyboard-api/actions/workflows/ci.yml/badge.svg)
 
 ## Resumo em português
 
