@@ -1,8 +1,11 @@
 import logging
 
+import pytest
+
 from app.dependencies import get_generator
 from app.main import app
 from app.schemas import BriefCreate, Scene, Storyboard
+from app.services.base import GeneratorError
 
 VALID_BRIEF = {
     "product_name": "Brew Box",
@@ -89,4 +92,25 @@ def test_invalid_generator_output_returns_502_and_saves_nothing(client, caplog):
     assert response.status_code == 502
     assert response.json() == {"detail": "Generated storyboard failed validation"}
     assert "failed validation" in caplog.text
+    assert client.get("/briefs").json() == []
+
+
+@pytest.mark.parametrize(
+    ("kind", "status_code", "detail"),
+    [
+        ("invalid_output", 502, "Generated storyboard failed validation"),
+        ("unavailable", 503, "Storyboard generator temporarily unavailable"),
+    ],
+)
+def test_generator_error_maps_to_status_and_saves_nothing(client, kind, status_code, detail):
+    class FailingGenerator:
+        def generate(self, brief: BriefCreate) -> Storyboard:
+            raise GeneratorError(kind)
+
+    app.dependency_overrides[get_generator] = FailingGenerator
+
+    response = post_brief(client)
+
+    assert response.status_code == status_code
+    assert response.json() == {"detail": detail}
     assert client.get("/briefs").json() == []
